@@ -29,7 +29,8 @@ Unless required by applicable law or agreed to in writing, software distributed 
 
 @implementation SMLSnippetsController
 
-@synthesize snippetsTextView, snippetsWindow, snippetCollectionsArrayController, snippetCollectionsTableView, snippetsTableView, snippetsArrayController;
+@synthesize snippetsTextView, snippetsWindow, snippetCollectionsArrayController, 
+            snippetCollectionsTableView, snippetsTableView, snippetsArrayController;
 
 static id sharedInstance = nil;
 

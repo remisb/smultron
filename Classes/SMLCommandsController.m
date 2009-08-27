@@ -30,8 +30,8 @@ Unless required by applicable law or agreed to in writing, software distributed 
 
 static id sharedInstance = nil;
 
-@synthesize commandsTextView, commandsWindow, commandCollectionsArrayController, commandCollectionsTableView, commandsTableView, commandsArrayController;
-
+@synthesize commandsTextView, commandsWindow, commandCollectionsArrayController, 
+            commandCollectionsTableView, commandsTableView, commandsArrayController;
 
 + (SMLCommandsController *)sharedInstance
 { 
@@ -41,7 +41,6 @@ static id sharedInstance = nil;
 	
 	return sharedInstance;
 } 
-
 
 - (id)init 
 {
@@ -184,6 +183,11 @@ static id sharedInstance = nil;
 	[commandsWindow makeKeyAndOrderFront:nil];
 }
 
+static NSString *_command_keys1[] = {
+    @"name", @"text", @"collectionName", @"shortcutDisplayString",
+    @"shortcutMenuItemKeyString", @"shortcutModifier", @"sortOrder",
+    nil
+};
 
 - (void)performCommandsImportWithPath:(NSString *)path
 {
@@ -199,13 +203,12 @@ static id sharedInstance = nil;
 	id item;
 	for (item in commands) {
 		id command = [SMLBasic createNewObjectForEntity:@"Command"];
-		[command setValue:[item valueForKey:@"name"] forKey:@"name"];
-		[command setValue:[item valueForKey:@"text"] forKey:@"text"];			
-		[command setValue:[item valueForKey:@"collectionName"] forKey:@"collectionName"];
-		[command setValue:[item valueForKey:@"shortcutDisplayString"] forKey:@"shortcutDisplayString"];
-		[command setValue:[item valueForKey:@"shortcutMenuItemKeyString"] forKey:@"shortcutMenuItemKeyString"];
-		[command setValue:[item valueForKey:@"shortcutModifier"] forKey:@"shortcutModifier"];
-		[command setValue:[item valueForKey:@"sortOrder"] forKey:@"sortOrder"];
+        int i;
+        for (i = 0; _command_keys1[i]; i++) {
+            NSString *key = _command_keys1[i];
+            [command setValue:[item valueForKey:key] forKey:key];
+        }
+
 		if ([item valueForKey:@"inline"] != nil) {
 			[command setValue:[item valueForKey:@"inline"] forKey:@"inline"];
 		}
@@ -234,33 +237,35 @@ static id sharedInstance = nil;
 	
 }
 
+static NSString *_command_keys[] = {
+    @"name", @"text", @"collectionName", @"shortcutDisplayString",
+    @"shortcutMenuItemKeyString", @"shortcutModifier", @"sortOrder",
+    @"inline", @"interpreter", nil };
 
 - (void)exportCommandsPanelDidEnd:(NSSavePanel *)sheet returnCode:(NSInteger)returnCode contextInfo:(void *)context
 {
-	if (returnCode == NSOKButton) {
-		id collection = [[commandCollectionsArrayController selectedObjects] objectAtIndex:0];
-		
-		NSMutableArray *exportArray = [NSMutableArray array];
-		NSEnumerator *enumerator = [[collection mutableSetValueForKey:@"commands"] objectEnumerator];
-		for (id item in enumerator) {
-			NSMutableDictionary *command = [[NSMutableDictionary alloc] init];
-			[command setValue:[item valueForKey:@"name"] forKey:@"name"];
-			[command setValue:[item valueForKey:@"text"] forKey:@"text"];
-			[command setValue:[collection valueForKey:@"name"] forKey:@"collectionName"];
-			[command setValue:[item valueForKey:@"shortcutDisplayString"] forKey:@"shortcutDisplayString"];
-			[command setValue:[item valueForKey:@"shortcutMenuItemKeyString"] forKey:@"shortcutMenuItemKeyString"];
-			[command setValue:[item valueForKey:@"shortcutModifier"] forKey:@"shortcutModifier"];
-			[command setValue:[item valueForKey:@"sortOrder"] forKey:@"sortOrder"];
-			[command setValue:[NSNumber numberWithInteger:3] forKey:@"version"];
-			[command setValue:[item valueForKey:@"inline"] forKey:@"inline"];
-			[command setValue:[item valueForKey:@"interpreter"] forKey:@"interpreter"];
-			[exportArray addObject:command];
-		}
-		
-		NSData *data = [NSKeyedArchiver archivedDataWithRootObject:exportArray];
-		[SMLOpenSave performDataSaveWith:data path:[sheet filename]];
-	}
-	
+	if (returnCode != NSOKButton)
+        goto Exit;
+
+    id collection = [[commandCollectionsArrayController selectedObjects] objectAtIndex:0];
+    
+    NSMutableArray *exportArray = [NSMutableArray array];
+    NSEnumerator *enumerator = [[collection mutableSetValueForKey:@"commands"] objectEnumerator];
+    for (id item in enumerator) {
+        NSMutableDictionary *command = [[NSMutableDictionary alloc] init];
+        int i;
+        for (i=0; _command_keys[i]; i++) {
+            NSString *key = _command_keys[i];
+            [command setValue:[item valueForKey:key] forKey:key];
+        }
+        [command setValue:[NSNumber numberWithInteger:3] forKey:@"version"];
+        [exportArray addObject:command];
+    }
+    
+    NSData *data = [NSKeyedArchiver archivedDataWithRootObject:exportArray];
+    [SMLOpenSave performDataSaveWith:data path:[sheet filename]];
+
+Exit:
 	[commandsWindow makeKeyAndOrderFront:nil];
 }
 
