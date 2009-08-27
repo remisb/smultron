@@ -34,84 +34,82 @@ Unless required by applicable law or agreed to in writing, software distributed 
 
 @implementation SMLSyntaxColouring
 
-@synthesize reactToChanges, functionDefinition, removeFromFunction, secondLayoutManager, thirdLayoutManager, fourthLayoutManager, undoManager;
+@synthesize reactToChanges, functionDefinition, removeFromFunction, 
+            secondLayoutManager, thirdLayoutManager, fourthLayoutManager, undoManager;
 
 - (id)init
 {
 	[self initWithDocument:nil];
-	
 	return self;
 }
 
-
 - (id)initWithDocument:(id)theDocument
 {
-	if (self = [super init]) {
-		
-		document = theDocument;
-		firstLayoutManager = (SMLLayoutManager *)[[document valueForKey:@"firstTextView"] layoutManager];
-		secondLayoutManager = nil;
-		thirdLayoutManager = nil;
-		fourthLayoutManager = nil;
-		[self setColours];
-		
-		letterCharacterSet = [NSCharacterSet letterCharacterSet];
-		NSMutableCharacterSet *temporaryCharacterSet = [[NSCharacterSet letterCharacterSet] mutableCopy];
-		[temporaryCharacterSet addCharactersInString:@"_:@#"];
-		keywordStartCharacterSet = [temporaryCharacterSet copy];
-		
-		temporaryCharacterSet = [[NSCharacterSet whitespaceAndNewlineCharacterSet] mutableCopy];
-		[temporaryCharacterSet formUnionWithCharacterSet:[NSCharacterSet symbolCharacterSet]];
-		[temporaryCharacterSet formUnionWithCharacterSet:[NSCharacterSet punctuationCharacterSet]];
-		[temporaryCharacterSet removeCharactersInString:@"_"];
-		keywordEndCharacterSet = [temporaryCharacterSet copy];
-		
-		temporaryCharacterSet = [[NSCharacterSet alphanumericCharacterSet] mutableCopy];
-		[temporaryCharacterSet addCharactersInString:@" -"]; // If there are two spaces before an attribute
-		attributesCharacterSet = [temporaryCharacterSet copy];
-		
-		[self setSyntaxDefinition];
-		
-		completeString = [[document valueForKey:@"firstTextView"] string];
-		textContainer = [[document valueForKey:@"firstTextView"] textContainer];
-		
-		reactToChanges = YES;
+    self = [super init];
+    if (!self)
+        return nil;
+    
+    document = theDocument;
+    firstLayoutManager = (SMLLayoutManager *)[[document valueForKey:@"firstTextView"] layoutManager];
+    secondLayoutManager = nil;
+    thirdLayoutManager = nil;
+    fourthLayoutManager = nil;
+    [self setColours];
+    
+    letterCharacterSet = [NSCharacterSet letterCharacterSet];
+    NSMutableCharacterSet *temporaryCharacterSet = [[NSCharacterSet letterCharacterSet] mutableCopy];
+    [temporaryCharacterSet addCharactersInString:@"_:@#"];
+    keywordStartCharacterSet = [temporaryCharacterSet copy];
+    
+    temporaryCharacterSet = [[NSCharacterSet whitespaceAndNewlineCharacterSet] mutableCopy];
+    [temporaryCharacterSet formUnionWithCharacterSet:[NSCharacterSet symbolCharacterSet]];
+    [temporaryCharacterSet formUnionWithCharacterSet:[NSCharacterSet punctuationCharacterSet]];
+    [temporaryCharacterSet removeCharactersInString:@"_"];
+    keywordEndCharacterSet = [temporaryCharacterSet copy];
+    
+    temporaryCharacterSet = [[NSCharacterSet alphanumericCharacterSet] mutableCopy];
+    [temporaryCharacterSet addCharactersInString:@" -"]; // If there are two spaces before an attribute
+    attributesCharacterSet = [temporaryCharacterSet copy];
+    
+    [self setSyntaxDefinition];
+    
+    completeString = [[document valueForKey:@"firstTextView"] string];
+    textContainer = [[document valueForKey:@"firstTextView"] textContainer];
+    
+    reactToChanges = YES;
 
-		[[document valueForKey:@"firstTextView"] setDelegate:self];
-		[[[document valueForKey:@"firstTextView"] textStorage] setDelegate:self];
-		undoManager = [[NSUndoManager alloc] init];
-		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(checkIfCanUndo) name:@"NSUndoManagerDidUndoChangeNotification" object:undoManager];
-		
-		lastLineHighlightRange = NSMakeRange(0, 0);
-		
-		NSUserDefaultsController *defaultsController = [NSUserDefaultsController sharedUserDefaultsController];
+    [[document valueForKey:@"firstTextView"] setDelegate:self];
+    [[[document valueForKey:@"firstTextView"] textStorage] setDelegate:self];
+    undoManager = [[NSUndoManager alloc] init];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(checkIfCanUndo) name:@"NSUndoManagerDidUndoChangeNotification" object:undoManager];
+    
+    lastLineHighlightRange = NSMakeRange(0, 0);
+    
+    static NSString *keys[] = {
+        @"values.CommandsColourWell", @"values.CommentsColourWell",
+        @"values.InstructionsColourWell", @"values.KeywordsColourWell",
+        @"values.AutocompleteColourWell", @"values.VariablesColourWell",
+        @"values.StringsColourWell", @"values.AttributesColourWell",
+        @"values.ColourCommands", @"values.ColourComments",
+        @"values.ColourInstructions", @"values.ColourKeywords",
+        @"values.ColourAutocomplete", @"values.ColourVariables",
+        @"values.ColourStrings", @"values.ColourAttributes",
+        @"values.ColourMultiLineStrings", @"values.OnlyColourTillTheEndOfLine",
+        @"values.HighlightCurrentLine", @"values.HighlightLineColourWell",
+        0 /* sentinel */            
+    };
+    NSUserDefaultsController *defaultsController = [NSUserDefaultsController sharedUserDefaultsController];
+    for (int i=0; keys[i]; i++) {
+        NSString *key = keys[i];
+        [defaultsController addObserver:self 
+                             forKeyPath:key 
+                                options:NSKeyValueObservingOptionNew 
+                                context:@"ColoursChanged"];
+    }
+    [defaultsController addObserver:self forKeyPath:@"values.ColourMultiLineStrings" options:NSKeyValueObservingOptionNew context:@"MultiLineChanged"];
 
-		[defaultsController addObserver:self forKeyPath:@"values.CommandsColourWell" options:NSKeyValueObservingOptionNew context:@"ColoursChanged"];
-		[defaultsController addObserver:self forKeyPath:@"values.CommentsColourWell" options:NSKeyValueObservingOptionNew context:@"ColoursChanged"];
-		[defaultsController addObserver:self forKeyPath:@"values.InstructionsColourWell" options:NSKeyValueObservingOptionNew context:@"ColoursChanged"];
-		[defaultsController addObserver:self forKeyPath:@"values.KeywordsColourWell" options:NSKeyValueObservingOptionNew context:@"ColoursChanged"];
-		[defaultsController addObserver:self forKeyPath:@"values.AutocompleteColourWell" options:NSKeyValueObservingOptionNew context:@"ColoursChanged"];
-		[defaultsController addObserver:self forKeyPath:@"values.VariablesColourWell" options:NSKeyValueObservingOptionNew context:@"ColoursChanged"];
-		[defaultsController addObserver:self forKeyPath:@"values.StringsColourWell" options:NSKeyValueObservingOptionNew context:@"ColoursChanged"];
-		[defaultsController addObserver:self forKeyPath:@"values.AttributesColourWell" options:NSKeyValueObservingOptionNew context:@"ColoursChanged"];
-		[defaultsController addObserver:self forKeyPath:@"values.ColourCommands" options:NSKeyValueObservingOptionNew context:@"ColoursChanged"];
-		[defaultsController addObserver:self forKeyPath:@"values.ColourComments" options:NSKeyValueObservingOptionNew context:@"ColoursChanged"];
-		[defaultsController addObserver:self forKeyPath:@"values.ColourInstructions" options:NSKeyValueObservingOptionNew context:@"ColoursChanged"];
-		[defaultsController addObserver:self forKeyPath:@"values.ColourKeywords" options:NSKeyValueObservingOptionNew context:@"ColoursChanged"];
-		[defaultsController addObserver:self forKeyPath:@"values.ColourAutocomplete" options:NSKeyValueObservingOptionNew context:@"ColoursChanged"];
-		[defaultsController addObserver:self forKeyPath:@"values.ColourVariables" options:NSKeyValueObservingOptionNew context:@"ColoursChanged"];
-		[defaultsController addObserver:self forKeyPath:@"values.ColourStrings" options:NSKeyValueObservingOptionNew context:@"ColoursChanged"];
-		[defaultsController addObserver:self forKeyPath:@"values.ColourAttributes" options:NSKeyValueObservingOptionNew context:@"ColoursChanged"];
-		[defaultsController addObserver:self forKeyPath:@"values.ColourMultiLineStrings" options:NSKeyValueObservingOptionNew context:@"ColoursChanged"];
-		[defaultsController addObserver:self forKeyPath:@"values.OnlyColourTillTheEndOfLine" options:NSKeyValueObservingOptionNew context:@"ColoursChanged"];
-		[defaultsController addObserver:self forKeyPath:@"values.HighlightCurrentLine" options:NSKeyValueObservingOptionNew context:@"ColoursChanged"];
-		[defaultsController addObserver:self forKeyPath:@"values.HighlightLineColourWell" options:NSKeyValueObservingOptionNew context:@"ColoursChanged"];
-		[defaultsController addObserver:self forKeyPath:@"values.ColourMultiLineStrings" options:NSKeyValueObservingOptionNew context:@"MultiLineChanged"];
-		
-	}
     return self;
 }
-
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
 {
@@ -133,7 +131,6 @@ Unless required by applicable law or agreed to in writing, software distributed 
 	}
 	
 }
-
 
 - (NSUndoManager *)undoManagerForTextView:(NSTextView *)aTextView
 {
@@ -163,7 +160,6 @@ Unless required by applicable law or agreed to in writing, software distributed 
 	
 	lineHighlightColour = [[NSDictionary alloc] initWithObjectsAndKeys:[NSUnarchiver unarchiveObjectWithData:[SMLDefaults valueForKey:@"HighlightLineColourWell"]], NSBackgroundColorAttributeName, nil];
 }
-
 
 - (void)setSyntaxDefinition
 {	
@@ -286,28 +282,24 @@ Unless required by applicable law or agreed to in writing, software distributed 
 		keywords = lowerCaseKeywordsSet;
 	}
 	
+    beginCommand = @"";
 	if ([syntaxDictionary valueForKey:@"beginCommand"]) {
 		beginCommand = [syntaxDictionary valueForKey:@"beginCommand"];
-	} else { 
-		beginCommand = @"";
 	}
 	
+    endCommand = @"";
 	if ([syntaxDictionary valueForKey:@"endCommand"]) {
 		endCommand = [syntaxDictionary valueForKey:@"endCommand"];
-	} else { 
-		endCommand = @"";
 	}
 	
+    beginInstruction:@"";
 	if ([syntaxDictionary valueForKey:@"beginInstruction"]) {
 		beginInstruction = [syntaxDictionary valueForKey:@"beginInstruction"];
-	} else {
-beginInstruction:@"";
 	}
 	
+    endInstruction = @"";
 	if ([syntaxDictionary valueForKey:@"endInstruction"]) {
 		endInstruction = [syntaxDictionary valueForKey:@"endInstruction"];
-	} else {
-		endInstruction = @"";
 	}
 	
 	if ([syntaxDictionary valueForKey:@"beginVariable"]) {
@@ -320,70 +312,60 @@ beginInstruction:@"";
 		endVariable = [NSCharacterSet characterSetWithCharactersInString:@""];
 	}
 	
+    firstString = @"";
 	if ([syntaxDictionary valueForKey:@"firstString"]) {
 		firstString = [syntaxDictionary valueForKey:@"firstString"];
 		if (![[syntaxDictionary valueForKey:@"firstString"] isEqualToString:@""]) {
 			firstStringUnichar = [[syntaxDictionary valueForKey:@"firstString"] characterAtIndex:0];
 		}
-	} else { 
-		firstString = @"";
 	}
 	
+    secondString = @"";
 	if ([syntaxDictionary valueForKey:@"secondString"]) {
 		secondString = [syntaxDictionary valueForKey:@"secondString"];
 		if (![[syntaxDictionary valueForKey:@"secondString"] isEqualToString:@""]) {
 			secondStringUnichar = [[syntaxDictionary valueForKey:@"secondString"] characterAtIndex:0];
 		}
-	} else { 
-		secondString = @"";
 	}
 	
+    firstSingleLineComment = @"";
 	if ([syntaxDictionary valueForKey:@"firstSingleLineComment"]) {
 		firstSingleLineComment = [syntaxDictionary valueForKey:@"firstSingleLineComment"];
-	} else {
-		firstSingleLineComment = @"";
 	}
 	
+    secondSingleLineComment = @"";
 	if ([syntaxDictionary valueForKey:@"secondSingleLineComment"]) {
 		secondSingleLineComment = [syntaxDictionary valueForKey:@"secondSingleLineComment"];
-	} else {
-		secondSingleLineComment = @"";
 	}
 	
+    beginFirstMultiLineComment = @"";
 	if ([syntaxDictionary valueForKey:@"beginFirstMultiLineComment"]) {
 		beginFirstMultiLineComment = [syntaxDictionary valueForKey:@"beginFirstMultiLineComment"];
-	} else {
-		beginFirstMultiLineComment = @"";
 	}
 	
+    endFirstMultiLineComment = @"";
 	if ([syntaxDictionary valueForKey:@"endFirstMultiLineComment"]) {
 		endFirstMultiLineComment = [syntaxDictionary valueForKey:@"endFirstMultiLineComment"];
-	} else {
-		endFirstMultiLineComment = @"";
 	}
 	
+    beginSecondMultiLineComment = @"";
 	if ([syntaxDictionary valueForKey:@"beginSecondMultiLineComment"]) {
 		beginSecondMultiLineComment = [syntaxDictionary valueForKey:@"beginSecondMultiLineComment"];
-	} else {
-		beginSecondMultiLineComment = @"";
 	}
 	
+    endSecondMultiLineComment = @"";
 	if ([syntaxDictionary valueForKey:@"endSecondMultiLineComment"]) {
 		endSecondMultiLineComment = [syntaxDictionary valueForKey:@"endSecondMultiLineComment"];
-	} else {
-		endSecondMultiLineComment = @"";
 	}
 	
+    self.functionDefinition = @"";
 	if ([syntaxDictionary valueForKey:@"functionDefinition"]) {
 		self.functionDefinition = [syntaxDictionary valueForKey:@"functionDefinition"];
-	} else {
-		self.functionDefinition = @"";
 	}
 	
+    self.removeFromFunction = @"";
 	if ([syntaxDictionary valueForKey:@"removeFromFunction"]) {
 		self.removeFromFunction = [syntaxDictionary valueForKey:@"removeFromFunction"];
-	} else {
-		self.removeFromFunction = @"";
 	}
 	
 	if ([syntaxDictionary valueForKey:@"excludeFromKeywordStartCharacterSet"]) {
@@ -413,21 +395,25 @@ beginInstruction:@"";
 	[self prepareRegularExpressions];
 }
 
-
 - (void)prepareRegularExpressions
 {
 	if ([[SMLDefaults valueForKey:@"ColourMultiLineStrings"] boolValue] == NO) {
-		firstStringPattern = [[ICUPattern alloc] initWithString:[NSString stringWithFormat:@"\\W%@[^%@\\\\\\r\\n]*+(?:\\\\(?:.|$)[^%@\\\\\\r\\n]*+)*+%@", firstString, firstString, firstString, firstString]];
-		
-		secondStringPattern = [[ICUPattern alloc] initWithString:[NSString stringWithFormat:@"\\W%@[^%@\\\\\\r\\n]*+(?:\\\\(?:.|$)[^%@\\\\]*+)*+%@", secondString, secondString, secondString, secondString]];
+		firstStringPattern = [[ICUPattern alloc] initWithString:
+                              [NSString stringWithFormat:@"\\W%@[^%@\\\\\\r\\n]*+(?:\\\\(?:.|$)[^%@\\\\\\r\\n]*+)*+%@",
+                               firstString, firstString, firstString, firstString]];
+		secondStringPattern = [[ICUPattern alloc] initWithString:
+                               [NSString stringWithFormat:@"\\W%@[^%@\\\\\\r\\n]*+(?:\\\\(?:.|$)[^%@\\\\]*+)*+%@",
+                                secondString, secondString, secondString, secondString]];
 
 	} else {
-		firstStringPattern = [[ICUPattern alloc] initWithString:[NSString stringWithFormat:@"\\W%@[^%@\\\\]*+(?:\\\\(?:.|$)[^%@\\\\]*+)*+%@", firstString, firstString, firstString, firstString]];
-		
-		secondStringPattern = [[ICUPattern alloc] initWithString:[NSString stringWithFormat:@"\\W%@[^%@\\\\]*+(?:\\\\(?:.|$)[^%@\\\\]*+)*+%@", secondString, secondString, secondString, secondString]];
+		firstStringPattern = [[ICUPattern alloc] initWithString:
+                              [NSString stringWithFormat:@"\\W%@[^%@\\\\]*+(?:\\\\(?:.|$)[^%@\\\\]*+)*+%@",
+                               firstString, firstString, firstString, firstString]];
+		secondStringPattern = [[ICUPattern alloc] initWithString:
+                               [NSString stringWithFormat:@"\\W%@[^%@\\\\]*+(?:\\\\(?:.|$)[^%@\\\\]*+)*+%@",
+                                secondString, secondString, secondString, secondString]];
 	}
 }
-
 
 #pragma mark -
 #pragma mark Colouring
@@ -447,7 +433,6 @@ beginInstruction:@"";
 	}
 }
 
-
 - (void)removeColoursFromRange:(NSRange)range
 {
 	[firstLayoutManager removeTemporaryAttribute:NSForegroundColorAttributeName forCharacterRange:range];
@@ -462,7 +447,6 @@ beginInstruction:@"";
 	}
 }
 
-
 - (void)pageRecolour
 {
 	[self pageRecolourTextView:[document valueForKey:@"firstTextView"]];
@@ -476,7 +460,6 @@ beginInstruction:@"";
 		[self pageRecolourTextView:[document valueForKey:@"fourthTextView"]];
 	}
 }
-
 
 - (void)pageRecolourTextView:(SMLTextView *)textView
 {
@@ -494,7 +477,6 @@ beginInstruction:@"";
 	
 	[self recolourRange:NSMakeRange(beginningOfFirstVisibleLine, endOfLastVisibleLine - beginningOfFirstVisibleLine)];
 }
-
 
 - (void)recolourRange:(NSRange)range
 {
@@ -1017,7 +999,6 @@ beginInstruction:@"";
 	
 }
 
-
 - (void)setColour:(NSDictionary *)colourDictionary range:(NSRange)range
 {
 	[firstLayoutManager setTemporaryAttributes:colourDictionary forCharacterRange:range];
@@ -1031,7 +1012,6 @@ beginInstruction:@"";
 		[fourthLayoutManager setTemporaryAttributes:colourDictionary forCharacterRange:range];
 	}
 }
-
 
 - (void)highlightLineRange:(NSRange)lineRange
 {
@@ -1065,7 +1045,6 @@ beginInstruction:@"";
 	
 	lastLineHighlightRange = lineRange;
 }
-
 
 #pragma mark -
 #pragma mark Delegates
@@ -1107,7 +1086,6 @@ beginInstruction:@"";
 	[[document valueForKey:@"lineNumbers"] updateLineNumbersCheckWidth:NO recolour:NO];
 }
 
-
 - (void)textViewDidChangeSelection:(NSNotification *)aNotification
 {
 	if (reactToChanges == NO) {
@@ -1134,7 +1112,6 @@ beginInstruction:@"";
 		return;
 	}
 
-	
 	cursorLocation = editedRange.location;
 	differenceBetweenLastAndPresent = cursorLocation - lastCursorLocation;
 	lastCursorLocation = cursorLocation;
@@ -1215,7 +1192,6 @@ beginInstruction:@"";
 	}
 }
 
-
 - (NSArray *)textView:theTextView completions:(NSArray *)words forPartialWordRange:(NSRange)charRange indexOfSelectedItem:(int *)index
 {
 	if ([keywordsAndAutocompleteWords count] == 0) {
@@ -1246,7 +1222,6 @@ beginInstruction:@"";
 		return matchArray;
 	}
 }
-
 
 #pragma mark -
 #pragma mark Other
@@ -1281,7 +1256,6 @@ beginInstruction:@"";
 	return returnString;
 }
 
-
 - (void)checkIfCanUndo
 {
 	if (![undoManager canUndo]) {
@@ -1290,7 +1264,6 @@ beginInstruction:@"";
 		[SMLCurrentProject reloadData];
 	}
 }
-
 
 - (void)autocompleteWordsTimerSelector:(NSTimer *)theTimer
 {
@@ -1313,7 +1286,6 @@ beginInstruction:@"";
 		autocompleteWordsTimer = nil;
 	}
 }
-
 
 - (void)liveUpdatePreviewTimerSelector:(NSTimer *)theTimer
 {
