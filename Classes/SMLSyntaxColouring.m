@@ -1227,33 +1227,28 @@ Unless required by applicable law or agreed to in writing, software distributed 
 #pragma mark Other
 - (NSString *)guessSyntaxDefinitionFromFirstLine:(NSString *)firstLine
 {
-	NSString *returnString;
 	NSRange firstLineRange = NSMakeRange(0, [firstLine length]);
-	if ([firstLine rangeOfString:@"perl" options:NSCaseInsensitiveSearch range:firstLineRange].location != NSNotFound) {
-		returnString = @"pl";
-	} else if ([firstLine rangeOfString:@"wish" options:NSCaseInsensitiveSearch range:firstLineRange].location != NSNotFound) {
-		returnString = @"tcl";
-	} else if ([firstLine rangeOfString:@"sh" options:NSCaseInsensitiveSearch range:firstLineRange].location != NSNotFound) {
-		returnString = @"sh";
-	} else if ([firstLine rangeOfString:@"php" options:NSCaseInsensitiveSearch range:firstLineRange].location != NSNotFound) {
-		returnString = @"php";
-	} else if ([firstLine rangeOfString:@"python" options:NSCaseInsensitiveSearch range:firstLineRange].location != NSNotFound) {
-		returnString = @"py";
-	} else if ([firstLine rangeOfString:@"awk" options:NSCaseInsensitiveSearch range:firstLineRange].location != NSNotFound) {
-		returnString = @"awk";
-	} else if ([firstLine rangeOfString:@"xml" options:NSCaseInsensitiveSearch range:firstLineRange].location != NSNotFound) {
-		returnString = @"xml";
-	} else if ([firstLine rangeOfString:@"ruby" options:NSCaseInsensitiveSearch range:firstLineRange].location != NSNotFound) {
-		returnString = @"rb";
-	} else if ([firstLine rangeOfString:@"%!ps" options:NSCaseInsensitiveSearch range:firstLineRange].location != NSNotFound) {
-		returnString = @"ps";
-	} else if ([firstLine rangeOfString:@"%pdf" options:NSCaseInsensitiveSearch range:firstLineRange].location != NSNotFound) {
-		returnString = @"pdf";
-	} else {
-		returnString = @"";
-	}
-	
-	return returnString;
+    static NSString *stringToExt[] = {
+        @"perl", @"pl",
+        @"wish", @"tcl",
+        @"sh", @"sh",
+        @"php", @"php",
+        @"python", @"py",
+        @"awk", @"awk",
+        @"xml", @"xml",
+        @"ruby", @"ruby",
+        @"%!ps", @"ps",
+        @"%pdf", @"pdf",
+        0 /* sentinel */
+    };
+
+    for (int i=0; stringToExt[i*2]; i++) {
+        NSString *s = stringToExt[i*2];
+        NSRange range = [firstLine rangeOfString:s options:NSCaseInsensitiveSearch range:firstLineRange];
+        if (range.location != NSNotFound)
+            return stringToExt[i*2+1];
+    }
+    return @"";
 }
 
 - (void)checkIfCanUndo
