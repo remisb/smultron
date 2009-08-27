@@ -34,7 +34,6 @@ static id sharedInstance = nil;
 	return sharedInstance; 
 } 
 
-
 - (id)init 
 {
     if (sharedInstance == nil) {
@@ -42,7 +41,6 @@ static id sharedInstance = nil;
     }
     return sharedInstance;
 }
-
 
 - (void)showPreviewWindow
 {	
@@ -59,80 +57,77 @@ static id sharedInstance = nil;
 	[self reload];
 }
 
-
 - (void)reload
 {
-	if ([SMLCurrentProject areThereAnyDocuments]) {
-		
-		scrollPoint = [[[[[[webView mainFrame] frameView] documentView] enclosingScrollView] contentView] bounds].origin;
-			
-		[[NSURLCache sharedURLCache] removeAllCachedResponses];
-
-		NSURL *baseURL;
-		if ([[SMLDefaults valueForKey:@"BaseURL"] isEqualToString:@""]) { // If no base URL is supplied use the document path
-			if ([[SMLCurrentDocument valueForKey:@"isNewDocument"] boolValue] == NO) {
-				NSString *path = [NSString stringWithString:[SMLCurrentDocument valueForKey:@"path"]];
-				baseURL = [NSURL fileURLWithPath:path];
-			} else {
-				baseURL = [NSURL URLWithString:@""];
-			}
-		} else {
-			baseURL = [NSURL URLWithString:[[SMLDefaults valueForKey:@"BaseURL"] stringByAppendingPathComponent:[SMLCurrentDocument valueForKey:@"name"]]];
-		}
-		
-		if ([SMLCurrentDocument valueForKey:@"path"] != nil) {
-			NSString *path;
-			if ([[SMLCurrentDocument valueForKey:@"fromExternal"] boolValue] == NO) {
-				path = [SMLCurrentDocument valueForKey:@"path"];
-			} else {
-				path = [SMLCurrentDocument valueForKey:@"externalPath"];
-			}
-			[previewWindow setTitle:[NSString stringWithFormat:@"%@ - %@", path, PREVIEW_STRING]];
-		} else {
-			[previewWindow setTitle:[NSString stringWithFormat:@"%@ - %@", [SMLCurrentDocument valueForKey:@"name"], PREVIEW_STRING]];
-		}
-		
-		NSData *data;
-		if ([[SMLDefaults valueForKey:@"PreviewParser"] integerValue] == SMLPreviewHTML) {
-			data = [SMLCurrentText dataUsingEncoding:NSUTF8StringEncoding];
-		} else {
-			NSString *temporaryPathMarkdown = [SMLBasic genererateTemporaryPath];
-			[SMLCurrentText writeToFile:temporaryPathMarkdown atomically:YES encoding:[[SMLCurrentDocument valueForKey:@"encoding"] integerValue] error:nil];
-			NSString *temporaryPathHTML = [SMLBasic genererateTemporaryPath];
-			NSString *htmlString;
-			if ([[NSFileManager defaultManager] fileExistsAtPath:temporaryPathMarkdown]) {
-				if ([[SMLDefaults valueForKey:@"PreviewParser"] integerValue] == SMLPreviewMarkdown) {
-					system([[NSString stringWithFormat:@"/usr/bin/perl %@ %@ > %@", [[NSBundle mainBundle] pathForResource:@"Markdown" ofType:@"pl"], temporaryPathMarkdown, temporaryPathHTML] UTF8String]);
-				} else {
-					system([[NSString stringWithFormat:@"/usr/bin/perl %@ %@ > %@", [[NSBundle mainBundle] pathForResource:@"MultiMarkdown" ofType:@"pl"], temporaryPathMarkdown, temporaryPathHTML] UTF8String]);
-				}
-				if ([[NSFileManager defaultManager] fileExistsAtPath:temporaryPathMarkdown]) {
-					htmlString = [NSString stringWithContentsOfFile:temporaryPathHTML encoding:[[SMLCurrentDocument valueForKey:@"encoding"] integerValue] error:nil];
-					[[NSFileManager defaultManager] removeFileAtPath:temporaryPathHTML handler:nil];
-				} else {
-					htmlString = SMLCurrentText;
-				}
-				[[NSFileManager defaultManager] removeFileAtPath:temporaryPathMarkdown handler:nil];
-			} else {
-				htmlString = SMLCurrentText;
-			}
-			data = [htmlString dataUsingEncoding:NSUTF8StringEncoding];
-		}
-		
-		[[webView mainFrame] loadData:data MIMEType:@"text/html" textEncodingName:@"utf-8" baseURL:baseURL];
-	} else {
+	if (![SMLCurrentProject areThereAnyDocuments])        
+    {
 		[[webView mainFrame] loadHTMLString:@"" baseURL:[NSURL URLWithString:@""]];
 		[previewWindow setTitle:PREVIEW_STRING];
-	}
+        return;
+    }
 
+    scrollPoint = [[[[[[webView mainFrame] frameView] documentView] enclosingScrollView] contentView] bounds].origin;
+			
+    [[NSURLCache sharedURLCache] removeAllCachedResponses];
+
+    NSURL *baseURL;
+    if ([[SMLDefaults valueForKey:@"BaseURL"] isEqualToString:@""]) { // If no base URL is supplied use the document path
+        if ([[SMLCurrentDocument valueForKey:@"isNewDocument"] boolValue] == NO) {
+            NSString *path = [NSString stringWithString:[SMLCurrentDocument valueForKey:@"path"]];
+            baseURL = [NSURL fileURLWithPath:path];
+        } else {
+            baseURL = [NSURL URLWithString:@""];
+        }
+    } else {
+        baseURL = [NSURL URLWithString:[[SMLDefaults valueForKey:@"BaseURL"] stringByAppendingPathComponent:[SMLCurrentDocument valueForKey:@"name"]]];
+    }
+    
+    if ([SMLCurrentDocument valueForKey:@"path"] != nil) {
+        NSString *path;
+        if ([[SMLCurrentDocument valueForKey:@"fromExternal"] boolValue] == NO) {
+            path = [SMLCurrentDocument valueForKey:@"path"];
+        } else {
+            path = [SMLCurrentDocument valueForKey:@"externalPath"];
+        }
+        [previewWindow setTitle:[NSString stringWithFormat:@"%@ - %@", path, PREVIEW_STRING]];
+    } else {
+        [previewWindow setTitle:[NSString stringWithFormat:@"%@ - %@", [SMLCurrentDocument valueForKey:@"name"], PREVIEW_STRING]];
+    }
+    
+    NSData *data;
+    if ([[SMLDefaults valueForKey:@"PreviewParser"] integerValue] == SMLPreviewHTML) {
+        data = [SMLCurrentText dataUsingEncoding:NSUTF8StringEncoding];
+    } else {
+        NSString *temporaryPathMarkdown = [SMLBasic genererateTemporaryPath];
+        [SMLCurrentText writeToFile:temporaryPathMarkdown atomically:YES encoding:[[SMLCurrentDocument valueForKey:@"encoding"] integerValue] error:nil];
+        NSString *temporaryPathHTML = [SMLBasic genererateTemporaryPath];
+        NSString *htmlString;
+        if ([[NSFileManager defaultManager] fileExistsAtPath:temporaryPathMarkdown]) {
+            if ([[SMLDefaults valueForKey:@"PreviewParser"] integerValue] == SMLPreviewMarkdown) {
+                system([[NSString stringWithFormat:@"/usr/bin/perl %@ %@ > %@", [[NSBundle mainBundle] pathForResource:@"Markdown" ofType:@"pl"], temporaryPathMarkdown, temporaryPathHTML] UTF8String]);
+            } else {
+                system([[NSString stringWithFormat:@"/usr/bin/perl %@ %@ > %@", [[NSBundle mainBundle] pathForResource:@"MultiMarkdown" ofType:@"pl"], temporaryPathMarkdown, temporaryPathHTML] UTF8String]);
+            }
+            if ([[NSFileManager defaultManager] fileExistsAtPath:temporaryPathMarkdown]) {
+                htmlString = [NSString stringWithContentsOfFile:temporaryPathHTML encoding:[[SMLCurrentDocument valueForKey:@"encoding"] integerValue] error:nil];
+                [[NSFileManager defaultManager] removeFileAtPath:temporaryPathHTML handler:nil];
+            } else {
+                htmlString = SMLCurrentText;
+            }
+            [[NSFileManager defaultManager] removeFileAtPath:temporaryPathMarkdown handler:nil];
+        } else {
+            htmlString = SMLCurrentText;
+        }
+        data = [htmlString dataUsingEncoding:NSUTF8StringEncoding];
+    }
+    
+    [[webView mainFrame] loadData:data MIMEType:@"text/html" textEncodingName:@"utf-8" baseURL:baseURL];
 }
-
 
 - (IBAction)reloadAction:(id)sender
 {
 	[self reload];
 }
-
 
 - (NSURLRequest *)webView:(WebView *)sender resource:(id)identifier willSendRequest:(NSURLRequest *)request redirectResponse:(NSURLResponse *)redirectResponse fromDataSource:(WebDataSource *)dataSource
 {
@@ -145,7 +140,6 @@ static id sharedInstance = nil;
 	}
 }
 
-
 - (void)liveUpdate
 {
 	if (previewWindow != nil && [previewWindow isVisible]) {
@@ -154,7 +148,6 @@ static id sharedInstance = nil;
 		[webView setResourceLoadDelegate:self];
 	}
 }
-
 
 - (void)webView:(WebView *)sender didFinishLoadForFrame:(WebFrame *)frame
 {
