@@ -203,8 +203,7 @@ static NSString *_command_keys1[] = {
 	id item;
 	for (item in commands) {
 		id command = [SMLBasic createNewObjectForEntity:@"Command"];
-        int i;
-        for (i = 0; _command_keys1[i]; i++) {
+        for (int i = 0; _command_keys1[i]; i++) {
             NSString *key = _command_keys1[i];
             [command setValue:[item valueForKey:key] forKey:key];
         }
@@ -253,8 +252,7 @@ static NSString *_command_keys[] = {
     NSEnumerator *enumerator = [[collection mutableSetValueForKey:@"commands"] objectEnumerator];
     for (id item in enumerator) {
         NSMutableDictionary *command = [[NSMutableDictionary alloc] init];
-        int i;
-        for (i=0; _command_keys[i]; i++) {
+        for (int i=0; _command_keys[i]; i++) {
             NSString *key = _command_keys[i];
             [command setValue:[item valueForKey:key] forKey:key];
         }

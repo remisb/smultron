@@ -192,34 +192,23 @@ static id sharedInstance = nil;
 	return returnString;
 }
 
+// encodes key codes for F1-F19 key strings. Number at position N is a key code
+// for F${N+1} key
+static const NSInteger _fnKeyCode[] = {
+    0x7A, 0x78, 0x63, 0x76, 0x60, 0x61, 0x62, 0x64, 0x65, 0x6D,
+    0x67, 0x6F, 0x69, 0x6B, 0x71, 0x6A, 0x40, 0x4F, 0x50,
+    0 /* 0 is a sentinel */
+};
 
 - (NSString *)plainKeyStringFromEvent:(NSEvent *)event
 {
-	NSString *returnString;
 	NSInteger keyCode = [event keyCode];
-	
-	if (keyCode == 0x7A) returnString = [NSString stringWithString:@"F1"];
-	else if (keyCode == 0x78) returnString = [NSString stringWithString:@"F2"];
-	else if (keyCode == 0x63) returnString = [NSString stringWithString:@"F3"];
-	else if (keyCode == 0x76) returnString = [NSString stringWithString:@"F4"];
-	else if (keyCode == 0x60) returnString = [NSString stringWithString:@"F5"];
-	else if (keyCode == 0x61) returnString = [NSString stringWithString:@"F6"];
-	else if (keyCode == 0x62) returnString = [NSString stringWithString:@"F7"];
-	else if (keyCode == 0x64) returnString = [NSString stringWithString:@"F8"];
-	else if (keyCode == 0x65) returnString = [NSString stringWithString:@"F9"];
-	else if (keyCode == 0x6D) returnString = [NSString stringWithString:@"F10"];
-	else if (keyCode == 0x67) returnString = [NSString stringWithString:@"F11"];
-	else if (keyCode == 0x6F) returnString = [NSString stringWithString:@"F12"];
-	else if (keyCode == 0x69) returnString = [NSString stringWithString:@"F13"];
-	else if (keyCode == 0x6B) returnString = [NSString stringWithString:@"F14"];
-	else if (keyCode == 0x71) returnString = [NSString stringWithString:@"F15"];
-	else if (keyCode == 0x6A) returnString = [NSString stringWithString:@"F16"];
-	else if (keyCode == 0x40) returnString = [NSString stringWithString:@"F17"];
-	else if (keyCode == 0x4F) returnString = [NSString stringWithString:@"F18"];
-	else if (keyCode == 0x50) returnString = [NSString stringWithString:@"F19"];
-	else
-		returnString = [self menuItemKeyStringFromEvent:event];
-	
+    for (int i=0; _fnKeyCode[i]; i++) {
+        if (keyCode == _fnKeyCode[i]) {
+            return [NSString stringWithFormat:@"F%d", i+1]; 
+        }
+    }
+    NSString *returnString = [self menuItemKeyStringFromEvent:event];
 	return [returnString uppercaseString];
 }
 
