@@ -85,7 +85,7 @@ Unless required by applicable law or agreed to in writing, software distributed 
 - (void)setShowInvisibleCharacters:(BOOL)flag
 {
 	showInvisibleCharacters = flag;
-	[self setShowsInvisibleCharacters:flag];
+	[super setShowsInvisibleCharacters:flag];
 }
 
 
